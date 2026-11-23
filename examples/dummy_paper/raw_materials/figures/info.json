@@ -1,0 +1,10 @@
+[
+  {
+    "name": "fig_convergence.png",
+    "caption": "Test accuracy versus epoch on CIFAR-10 with ResNet-18 for random order and TRACE (mean over 5 seeds). TRACE reaches 90% test accuracy at epoch 39 versus epoch 48 for random order."
+  },
+  {
+    "name": "fig_ablation.png",
+    "caption": "Effect of the window size w on final test accuracy (mean and standard deviation over 5 seeds). w = 5 gives the best accuracy (93.5%)."
+  }
+]

@@ -1,0 +1,2 @@
+# Optional: upstream Streamlit front-end (uses cloud Gemini models, not the local pipeline)
+streamlit

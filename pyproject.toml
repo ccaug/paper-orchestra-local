@@ -1,0 +1,18 @@
+[project]
+name = "paperorchestra-local"
+version = "0.1.0"
+description = "Write and review scientific papers with local LLMs (unofficial add-on to google-research/paper-orchestra)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["e2e: end-to-end dry runs that spawn the CLIs (need no real model)"]
+
+[tool.ruff]
+line-length = 140
+extend-exclude = ["methods", "utils", "autoraters", "frontend", "templates", "assets"]
+
+[tool.ruff.lint]
+select = ["E9", "F63", "F7", "F82"]   # syntax errors and undefined names only

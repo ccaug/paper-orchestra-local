@@ -1,0 +1,30 @@
+PaperOrchestra Local
+Copyright 2026 the PaperOrchestra Local contributors
+
+This repository is an UNOFFICIAL add-on. It is not affiliated with, endorsed by, or sponsored by Google.
+
+--------------------------------------------------------------------------------
+Third-party code included
+--------------------------------------------------------------------------------
+PaperOrchestra (https://github.com/google-research/paper-orchestra)
+Copyright Google LLC. Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+The following paths come from that project and are redistributed under the same license:
+  methods/  utils/  autoraters/  frontend/  assets/  templates/  paper_writing_cli.py  paper_writing_cli.sh
+  docs/UPSTREAM_README.md (the original README)
+
+Modifications to upstream files (Apache-2.0, section 4b):
+  utils/pdf_utils.py  - compile_latex(): longer timeout, absolute paths, bibtex only when the document
+                        uses a bibliography, -halt-on-error / -file-line-error. A notice is at the top of the file.
+All other upstream files are unmodified (only line endings normalised).
+
+Conference templates under templates/ (iclr2025, cvpr2025, NeurIPS_2026.zip) keep the licenses/terms of
+their original authors and organisers.
+
+--------------------------------------------------------------------------------
+Original code in this repository (Apache-2.0)
+--------------------------------------------------------------------------------
+plocal/  review_paper.py  write_paper_local.py  tools/  scripts/  tests/  docs/  examples/
+
+The example references in examples/dummy_paper/ are real, widely known papers; their summaries were
+written from scratch. The experimental results and the research idea in that folder are SYNTHETIC.
