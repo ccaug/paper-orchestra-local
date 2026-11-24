@@ -1,11 +1,6 @@
 # PaperOrchestra Local
 
-\begin{figure*}[t]
-    \centering
-    \includegraphics[width=\textwidth]{https://raw.githubusercontent.com/ccaug/paper-orchestra-local/main/assets/architecture.png}
-    \caption{PaperOrchestra Local architecture and extensibility. The diagram illustrates the WRITE and REVIEW applications, their processing pipelines, shared local inference infrastructure, supporting components, and developer extension points.}
-    \label{fig:paperorchestra-architecture}
-\end{figure*}
+![PaperOrchestra Local Architecture](architecture.png)
 
 PaperOrchestra Local is organized around two independent but complementary applications that share a replaceable local-model inference layer. The WRITE application transforms research materials—including an initial research idea, experimental logs, figures, captions, and a local reference library—into a complete scientific manuscript through four sequential stages: outline generation, offline literature synthesis, section drafting, and LaTeX assembly and compilation. The REVIEW application accepts existing manuscripts in LaTeX, folder, Overleaf ZIP, or PDF formats and processes them through a ten-stage review pipeline: parsing, structural mapping, initial scanning, adjudication, adversarial analysis, harmonization, cross-section verification, global assessment, patch generation, and final verification. Its interactive GUI provides live monitoring, evidence visualization, document comparison, and author-controlled suggestions.
 
