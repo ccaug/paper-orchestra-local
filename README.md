@@ -118,6 +118,273 @@ local_llm_shim.MODEL = "qwen2.5:3b-instruct"   # before stage 1 (outline)
 local_llm_shim.MODEL = "qwen2.5:14b-instruct"  # before stage 3 (section writing)
 ```
 
+# Using Other Models
+
+A model is simply a name sent to an OpenAI-compatible server. To use another model, pull it on your server (e.g., `ollama pull NAME`) and provide the exact model name to the application. You can verify available models with `ollama list`.
+
+## 1. Quick Reference: What Do I Change?
+
+| I want to... | Review App (`review_paper.py`) | Write App (`write_paper_local.py`) |
+|---|---|---|
+| Use another model | `--fast-model NAME --deep-model NAME` | `--model NAME` |
+| Use only one model | Give the same name to both flags (no model-switching step) | N/A (already uses one model) |
+| Make it permanent | `.env`: `FAST_MODEL=` and `DEEP_MODEL=` | `.env`: `LOCAL_LLM_MODEL=` |
+| Use another server | `LLM_BASE_URL=http://host:port/v1` | `--base_url URL` or `LLM_BASE_URL` |
+| Give it a bigger context window | `--ctx 32768` (+ your server's own setting) | `--ctx 32768` (+ your server's own setting) |
+| Allow longer answers | Fixed per call in `review_engine.py` | `LOCAL_MAX_TOKENS=8000` |
+| Stop a reasoning model from thinking | `NO_THINK=1` (default) | `NO_THINK=1` (default) |
+
+**Configuration priority:**
+
+Command-line flag > real environment variable > `.env` file > default in the code.
+
+## 2. Ready-to-Copy `.env` Examples
+
+### 16 GB Laptop, CPU Only
+
+```env
+FAST_MODEL=qwen2.5:3b-instruct
+DEEP_MODEL=qwen2.5:7b-instruct
+LOCAL_LLM_MODEL=qwen2.5:7b-instruct
+```
+
+### Only One Model Fits in Memory
+
+```env
+FAST_MODEL=qwen2.5:7b-instruct
+DEEP_MODEL=qwen2.5:7b-instruct
+```
+
+### 32 GB RAM
+
+```env
+FAST_MODEL=qwen2.5:7b-instruct
+DEEP_MODEL=qwen2.5:14b-instruct
+LOCAL_LLM_MODEL=qwen2.5:14b-instruct
+```
+
+### LM Studio
+
+```env
+LLM_BASE_URL=http://localhost:1234/v1
+```
+
+Use the exact model names displayed by LM Studio for the loaded models.
+
+### llama.cpp (`llama-server`)
+
+```env
+LLM_BASE_URL=http://localhost:8080/v1
+```
+
+The model name is usually ignored by the server. You can use any text.
+
+### Remote OpenAI-Compatible API
+
+```env
+LLM_BASE_URL=https://your-provider/v1
+OPENAI_API_KEY=your_api_key
+```
+
+**Important:** Your paper text will be sent to that provider.
+
+The model names above are examples. Any model pulled or loaded by your server can be used.
+
+## 3. Which Model Does Which Job? (Review App)
+
+| Model | Stages | What It Needs to Be Good At |
+|---|---|---|
+| `FAST_MODEL` | MAP (summaries), SCAN (screens every chunk) | Quoting text exactly and identifying candidate problems. A small instruct model is sufficient. |
+| `DEEP_MODEL` | ADJUDICATE, ATTACK, HARMONIZE, CROSS, GLOBAL, patch-tournament judge, score panel, executive summary | Determining whether a problem is real and producing faithful, minimal rewrites. Use the largest model your machine can run at a tolerable speed. |
+
+## 4. Server URLs (Typical Defaults)
+
+Verify the actual address and port configured on your server.
+
+| Server | `LLM_BASE_URL` |
+|---|---|
+| Ollama | `http://localhost:11434/v1` |
+| LM Studio | `http://localhost:1234/v1` |
+| llama.cpp (`llama-server`) | `http://localhost:8080/v1` |
+| vLLM | `http://localhost:8000/v1` |
+| Colibri (`coli serve`) | `http://127.0.0.1:8000/v1` |
+
+## 5. Choosing Models by Hardware
+
+These are starting points, not benchmarked recommendations.
+
+| Your Machine | Fast Model | Deep / Writer Model |
+|---|---|---|
+| 16 GB RAM, CPU | 3B–4B instruct | 7B–8B instruct (Q4) |
+| 32 GB RAM | 7B–8B instruct | 14B instruct |
+| GPU or 64 GB+ RAM | 8B–14B | 30B+ |
+
+**Recommendation:** Prefer non-thinking instruct models when running on CPU. Reasoning models can spend several minutes generating internal reasoning before producing an answer. The dashboard displays a `(thinking)` phase when this happens.
+
+## 6. Different Models for Different Jobs
+
+### A Third Model Only for the Tournament Judge (Review App)
+
+Edit `plocal/review_engine.py`.
+
+Add a separate judge model near the `FAST` and `DEEP` definitions:
+
+```python
+JUDGE = os.getenv("JUDGE_MODEL", DEEP)
+```
+
+Then, inside `judge()`, replace:
+
+```python
+llm.call(DEEP, ...)
+```
+
+with:
+
+```python
+llm.call(JUDGE, ...)
+```
+
+You can now configure the third model independently:
+
+```env
+JUDGE_MODEL=your-judge-model
+```
+
+### A Small Model for the Outline and a Large Model for Section Writing (Write App)
+
+Edit `write_paper_local.py`, inside `main()`.
+
+Set the model before each stage:
+
+```python
+# Before stage 1
+local_llm_shim.MODEL = "small-model"
+
+# Before stage 3
+local_llm_shim.MODEL = "big-model"
+```
+
+The model is read at every call, so changing it between stages works.
+
+**Performance consideration:** Most local servers keep only one model in memory. Switching models requires loading the next model, which adds time. The dashboard's time estimate does not account for additional switches you introduce.
+
+## 7. If Your Server Rejects Extra Request Fields
+
+The applications send two Ollama-specific extra fields:
+
+- `options.num_ctx`
+- `reasoning_effort`
+
+Most servers ignore unknown fields. However, if your server rejects them, use the following adjustments.
+
+| App | Remove `options.num_ctx` | Remove `reasoning_effort` and the `/no_think` suffix |
+|---|---|---|
+| Review | Set `OLLAMA_OPTS=0` | Set `NO_THINK=0` |
+| Write | Edit the `eb` dictionary in `local_chat()` inside `plocal/llm_shim.py` | Set `NO_THINK=0` |
+
+## 8. Using a Model Without an OpenAI-Compatible Server
+
+You can integrate models that do not run behind an OpenAI-compatible server, including:
+
+- In-process llama.cpp
+- Hugging Face Transformers
+- Native model APIs
+- Custom inference backends
+
+Each application has one central text-generation entry point. You can replace it using a small wrapper script without modifying the repository itself.
+
+### Integration Points
+
+| App | Replace | Your Function Must |
+|---|---|---|
+| Review | Subclass `LLM` and override `_gen(...)`, then set `E.LLM = MyBackend` | Return the raw generated answer text. |
+| Write | Replace `llm_shim.local_chat` with your function | Accept `(prompt, system, temperature, max_tokens, label)` and return the generated text. |
+
+### Example: Custom Backend for Both Applications
+
+Create `my_backend.py` and run it instead of `review_paper.py`.
+
+```python
+import time
+from plocal import review_engine as E, llm_shim
+
+
+def my_generate(system, user, max_tokens, temperature):
+    # Call YOUR model here and return the generated text.
+    ...
+
+
+class MyBackend(E.LLM):
+
+    def _gen(self, model, system, user, max_tokens,
+             temperature, label, mock_ctx):
+
+        t0 = time.time()
+
+        self.mon.phase("generate")  # GUI: LEYENDO -> GENERANDO
+
+        text = my_generate(
+            system,
+            user,
+            max_tokens,
+            temperature
+        )
+
+        self.mon.live(text[-700:], text)
+
+        self.mon.observe(
+            model,
+            (len(system) + len(user)) / 3,
+            0.0,
+            len(text) / 4,
+            time.time() - t0
+        )
+
+        return text
+
+
+E.LLM = MyBackend
+
+
+llm_shim.local_chat = lambda prompt, system=None, temperature=0.4, max_tokens=None, label="llm": \
+    my_generate(
+        system or "",
+        prompt,
+        max_tokens or 5500,
+        temperature
+    )
+
+
+import review_paper
+review_paper.main()
+```
+
+**What remains handled automatically?**
+
+The existing `LLM.call()` implementation continues to handle:
+
+- JSON parsing
+- Three retries
+- `<think>` tag stripping
+- Disk caching
+
+You only need to implement the actual model-generation function.
+
+## 9. Common Problems When Switching Models
+
+| Symptom | Likely Cause | Fix |
+|---|---|---|
+| Model not found / HTTP 404 | Model name does not match the server | Copy the exact name from `ollama list` or your server's model list. |
+| Paper seems cut off or output stops early | Context window is too small | Increase `--ctx` and the server's context setting (e.g., `OLLAMA_CONTEXT_LENGTH`). |
+| Stays on `LEYENDO` or `(thinking)` for minutes | Reasoning model or excessively long prompt for your CPU | Use a non-thinking instruct model, reduce `SECTION_CHARS`, and check `ollama ps`. |
+| Many parsing failures / invalid JSON or LaTeX | Model is too small for the task | Use a larger deep/writer model, increase `--ctx`, and rerun with `--resume` (Write App). |
+| New model produces the same answers as the old one | Potentially cached results | The cache is keyed by model + prompt, so different models should have separate entries. To force a completely fresh run, delete `<output>/.cache/`. |
+
+---
+
+**Final note:** Both applications are designed to work with different local inference servers and models. You are not locked into Ollama, a particular model family, or a specific hardware configuration. As long as you provide a compatible backend or implement the custom generation wrapper, you can adapt the system to your available infrastructure.
+
 ### Other servers
 
 | Server | Typical URL (check yours) |
