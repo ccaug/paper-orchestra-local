@@ -676,6 +676,499 @@ ruff check .
 
 The rewrite engine's promise to authors is: **numbers never change, no new citations/refs, LaTeX stays balanced, tables/math environments are never auto-edited, every rewrite is necessary, wins a position-swapped tournament and is logged with its justification; PDF-only mode never rewrites.** They are enforced in `try_patch`, `apply_patches`, `ground`, `latex_ok`, `necessary` and covered by `tests/test_engine_units.py`. Any new way of editing text must go through `try_patch` (or reproduce its checks) and come with a test.
 
+# Other applications
+
+# PaperOrchestra Local: Configurable AI Agent Architecture
+
+## 1. From a Scientific Writing Application to a General-Purpose Agent Framework
+
+One of the most important architectural advantages of **PaperOrchestra Local** is that its behavior can be substantially reconfigured through prompts, agent definitions, and orchestration logic without having to build an entirely new application.
+
+The objective is to evolve PaperOrchestra Local into a **general-purpose, multi-agent document processing and research framework**, rather than an application restricted to writing and reviewing scientific papers.
+
+Users should be able to configure different types of AI agents, including:
+
+- Scientific writers
+- Academic reviewers
+- Editors and proofreaders
+- Methodology reviewers
+- Statistical evaluators
+- Technical auditors
+- Research assistants
+- Literature reviewers
+- Documentation specialists
+- Custom task-specific agents
+
+The same local language model can perform different tasks simply by changing its role, instructions, context, and expected output.
+
+However, an important distinction must be maintained: prompts define what an agent should do, while the Python orchestration defines how it operates, what information it receives, which tools it can use, and what happens with its output.
+
+## 2. How Prompts Control Agent Behavior
+
+An AI agent generally operates using four fundamental elements:
+
+1. **Role:** Defines what the agent is supposed to be.
+2. **Objective:** Specifies the problem it must solve.
+3. **Instructions:** Establishes how it should perform its task.
+4. **Output contract:** Defines the expected response format.
+
+For example, the same local LLM can be configured as different agents.
+
+### Example A: Scientific Writer
+
+```yaml
+agent:
+  name: scientific_writer
+  role: Scientific Manuscript Author
+
+  objective: >
+    Transform research materials into a coherent
+    and scientifically accurate manuscript.
+
+  instructions:
+    - Use only supplied experimental evidence.
+    - Preserve numerical results.
+    - Maintain academic writing standards.
+    - Follow the selected publication template.
+    - Produce valid LaTeX.
+
+  output:
+    format: latex
+```
+
+### Example B: Scientific Reviewer
+
+```yaml
+agent:
+  name: scientific_reviewer
+  role: Critical Scientific Reviewer
+
+  objective: >
+    Identify methodological weaknesses, unsupported
+    claims, and inconsistencies in a manuscript.
+
+  instructions:
+    - Quote exact passages from the manuscript.
+    - Explain each identified problem.
+    - Assess finding severity.
+    - Propose evidence-based corrections.
+    - Never invent experimental evidence.
+
+  output:
+    format: json
+```
+
+### Example C: Technical Auditor
+
+```yaml
+agent:
+  name: technical_auditor
+  role: Technical Documentation Auditor
+
+  objective: >
+    Verify that technical descriptions agree with
+    implementation details and experimental evidence.
+
+  instructions:
+    - Identify technical discrepancies.
+    - Trace claims to their supporting evidence.
+    - Identify unsupported implementation claims.
+    - Provide actionable recommendations.
+
+  output:
+    format: json
+```
+
+These examples demonstrate that agent specialization does not necessarily require model retraining. The application can dynamically construct prompts using the selected agent configuration.
+
+## 3. Introducing Configurable Agent Profiles
+
+Instead of hardcoding every agent's instructions inside Python files, PaperOrchestra Local should introduce an **Agent Profile System**.
+
+Agent profiles would be defined externally using YAML or JSON configurations.
+
+A profile would contain:
+
+| Parameter | Description |
+|---|---|
+| Name | Unique agent identifier |
+| Role | Agent specialization |
+| Objective | Primary task |
+| Instructions | Operational guidelines |
+| Input | Required contextual information |
+| Output | Expected response format |
+| Constraints | Restrictions and validation requirements |
+| Model | Assigned local LLM |
+| Tools | Available execution capabilities |
+
+For example:
+
+```yaml
+agent:
+  name: methodology_reviewer
+  role: Scientific Methodology Reviewer
+
+  objective: >
+    Evaluate the methodological rigor of a scientific manuscript.
+
+  instructions:
+    - Identify weaknesses in experimental design.
+    - Evaluate reproducibility.
+    - Identify missing baselines.
+    - Check whether conclusions follow from results.
+    - Do not invent experimental evidence.
+
+  input:
+    - manuscript
+    - experimental_log
+    - figures
+    - references
+
+  output:
+    format: json
+    fields:
+      - finding
+      - evidence
+      - severity
+      - explanation
+      - recommendation
+
+  constraints:
+    preserve_original: true
+    require_exact_quotes: true
+    allow_automatic_rewrites: false
+```
+
+The application would load this configuration and construct the agent's prompts dynamically.
+
+This approach allows users to create, modify, export, and share specialized agents without modifying the underlying Python implementation, provided the required execution capabilities are available.
+
+## 4. Existing Prompt and Agent Integration Points
+
+PaperOrchestra Local already contains several integration points that support this development direction.
+
+| Component | Location | Responsibility |
+|---|---|---|
+| Review engine | `plocal/review_engine.py` | Review prompts, adjudication, adversarial analysis and global assessment |
+| Review utilities | `plocal/review_basics.py` | Parsing, cross-section checks and patch application |
+| Writing application | `write_paper_local.py` | Writing workflow and agent orchestration |
+| Upstream writing agents | `methods/agents/` | Original PaperOrchestra agents |
+| Upstream prompts | `methods/prompts/` | Original agent instructions |
+| Writing LLM interface | `plocal/llm_shim.py` | Writing-model integration |
+| Literature agent | `plocal/literature_local.py` | Offline literature processing |
+
+The existing review pipeline already separates its operations into specialized stages:
+
+```text
+PARSE
+  |
+  v
+MAP
+  |
+  v
+SCAN
+  |
+  v
+ADJUDICATE
+  |
+  v
+ATTACK
+  |
+  v
+HARMONIZE
+  |
+  v
+CROSS
+  |
+  v
+GLOBAL
+  |
+  v
+PATCH
+  |
+  v
+VERIFY
+```
+
+Each stage has a different responsibility and can use specialized prompts.
+
+Consequently, developers can modify the behavior of individual agents without necessarily redesigning the entire review pipeline.
+
+## 5. Generalized Agent Execution Architecture
+
+A configurable agent should follow a predictable execution cycle.
+
+```text
+             USER TASK
+                 |
+                 v
+         TASK DEFINITION
+                 |
+                 v
+       AGENT PROFILE LOADING
+                 |
+                 v
+         CONTEXT PREPARATION
+                 |
+                 v
+          LOCAL LLM INFERENCE
+                 |
+                 v
+          OUTPUT VALIDATION
+                 |
+                 v
+          RESULT PROCESSING
+                 |
+                 v
+          USER INTERFACE
+```
+
+### Execution stages
+
+**1. Task Definition**
+
+The user selects an existing agent or creates a new one and defines the objective.
+
+**2. Agent Profile Loading**
+
+The system loads the role, objective, instructions, constraints, model configuration, and output schema.
+
+**3. Context Preparation**
+
+The system retrieves the relevant manuscript sections, experimental logs, references, documents, or other task-specific information.
+
+**4. Local LLM Inference**
+
+The selected model executes the task using the configured inference backend.
+
+**5. Output Validation**
+
+The application validates the response format, evidence, constraints, and task-specific requirements.
+
+**6. Result Processing**
+
+The application presents the findings, generated content, modifications, or suggestions through the GUI.
+
+This architecture separates the agent's instructions from its execution environment.
+
+For example, a reviewer can identify a problem, while an independent validation component determines whether the finding is sufficiently grounded to justify an automatic modification.
+
+## 6. Examples of Specialized Agents
+
+The following agents could be implemented as configurable profiles or specialized extensions.
+
+| Agent | Main responsibility |
+|---|---|
+| Scientific Writer | Generate complete scientific manuscripts |
+| Academic Editor | Improve language, clarity, and structure |
+| Methodology Reviewer | Evaluate experimental design |
+| Statistical Reviewer | Audit statistical methods and results |
+| Literature Reviewer | Analyze supplied references |
+| Citation Auditor | Verify citation-to-claim relationships |
+| LaTeX Specialist | Repair document structure and compilation errors |
+| Technical Reviewer | Assess technical correctness |
+| Reproducibility Auditor | Evaluate experimental reproducibility |
+| Research Assistant | Organize ideas, evidence, and research materials |
+| Critical Reviewer | Simulate adversarial peer review |
+| Conference Reviewer | Evaluate manuscripts against publication criteria |
+| Abstract Generator | Generate abstracts from completed research |
+| Research Planner | Transform research ideas into experimental plans |
+
+Agents could operate independently or be combined into configurable workflows.
+
+### Example: Complete Research Workflow
+
+```text
+Research Idea and Experimental Results
+                 |
+                 v
+          RESEARCH PLANNER
+                 |
+                 v
+          LITERATURE AGENT
+                 |
+                 v
+          SCIENTIFIC WRITER
+                 |
+                 v
+         METHODOLOGY REVIEWER
+                 |
+                 v
+          CRITICAL REVIEWER
+                 |
+                 v
+           ACADEMIC EDITOR
+                 |
+                 v
+           LATEX VALIDATOR
+                 |
+                 v
+          FINAL MANUSCRIPT
+```
+
+Alternatively, users could select a single agent to perform an isolated task on an existing manuscript.
+
+This preserves both existing operating modes:
+
+- Creating a scientific paper from scratch.
+- Improving or reviewing an already completed paper.
+
+## 7. What Can Be Changed Through Prompts and What Requires Code?
+
+An important distinction is necessary between prompt customization and actual application extensibility.
+
+| Modification | Prompts / Configuration | Python Changes |
+|---|---|---|
+| Change an agent's role | Yes | No |
+| Change writing style | Yes | No |
+| Change reviewer criteria | Yes | No |
+| Introduce a different evaluation rubric | Usually | Sometimes |
+| Change output format | If supported | Sometimes |
+| Create agents using existing interfaces | Mostly | Orchestration may be needed |
+| Add new processing stages | No | Yes |
+| Give agents new tools | No | Yes |
+| Introduce external data retrieval | No | Yes |
+| Implement autonomous multi-agent coordination | No | Yes |
+| Change inference models | Yes | No, if backend compatible |
+| Extend the graphical interface | No | Yes |
+
+Changing a prompt does not automatically give a model new capabilities.
+
+For example, instructing an agent to execute Python code does not provide Python execution capabilities. This requires an actual tool integration, execution interface, and appropriate permissions.
+
+Similarly, existing scientific-safety guarantees must remain independent of prompts. An agent should not be able to bypass numerical preservation, evidence grounding, LaTeX validation, or patch verification simply because its instructions request it.
+
+## 8. Proposed Generalized Architecture
+
+The recommended development direction is to evolve PaperOrchestra Local toward the following structure:
+
+```text
+PaperOrchestra Local
+|
++-- Core Engine
+|   |
+|   +-- Agent Manager
+|   +-- Prompt Manager
+|   +-- Context Manager
+|   +-- Task Orchestrator
+|   +-- Tool Registry
+|   +-- Output Validator
+|
++-- Agent Profiles
+|   |
+|   +-- Writers
+|   +-- Reviewers
+|   +-- Editors
+|   +-- Evaluators
+|   +-- Research Assistants
+|   +-- Custom Agents
+|
++-- Workflows
+|   |
+|   +-- Write from Scratch
+|   +-- Review Existing Paper
+|   +-- Improve Existing Paper
+|   +-- Research and Writing
+|   +-- Custom Workflow
+|
++-- Local Inference
+|   |
+|   +-- Ollama
+|   +-- LM Studio
+|   +-- llama.cpp
+|   +-- vLLM
+|   +-- Custom Backends
+|
++-- User Interface
+    |
+    +-- Agent Configuration
+    +-- Prompt Editor
+    +-- Workflow Builder
+    +-- Model Assignment
+    +-- Live Execution Monitor
+    +-- Results and Validation
+```
+
+This organization separates agent definitions, execution logic, model inference, and user interaction.
+
+## 9. Visual Agent and Prompt Editor
+
+An important extension would be a graphical interface allowing users to configure agents without manually editing YAML files or Python source code.
+
+The proposed interface should support:
+
+- Creating an agent from scratch.
+- Defining its role and objectives.
+- Writing and modifying system prompts.
+- Configuring instructions and restrictions.
+- Selecting input documents and contextual information.
+- Defining expected output formats.
+- Assigning local models to individual agents.
+- Testing prompts before executing complete workflows.
+- Combining agents into sequential workflows.
+- Exporting and importing agent configurations.
+
+Two configuration levels are recommended.
+
+### Simple Mode
+
+Designed for researchers and ordinary users.
+
+Users can modify:
+- Agent roles.
+- Objectives.
+- Prompts.
+- Writing styles.
+- Review criteria.
+- Output requirements.
+
+### Advanced Mode
+
+Designed for developers.
+
+Users can modify:
+- Python agent implementations.
+- Execution logic.
+- Tool integrations.
+- Validation mechanisms.
+- Workflow orchestration.
+- Model interfaces.
+- Custom processing stages.
+
+This approach makes the application accessible to non-programmers while preserving extensibility for advanced developers.
+
+## 10. Development Priorities
+
+The recommended implementation order is:
+
+1. **Prompt Manager:** Centralize agent prompts and separate them from hardcoded Python instructions.
+2. **Agent Profile System:** Introduce YAML/JSON configurations for defining specialized agents.
+3. **Agent Registry:** Allow the application to discover, load, and manage available agents.
+4. **Dynamic Model Assignment:** Allow different models to perform different tasks.
+5. **Output Validation:** Enforce structured outputs and task-specific safety constraints.
+6. **Workflow Orchestrator:** Allow users to combine multiple agents into sequential workflows.
+7. **Agent GUI:** Introduce visual configuration, prompt editing, and agent testing.
+8. **Custom Tool Integration:** Allow developers to extend agent capabilities through controlled interfaces.
+9. **Import and Export:** Enable users to share agent profiles and workflows.
+
+These extensions should preserve the existing WRITE and REVIEW implementations rather than replacing them unnecessarily.
+
+## 11. Final Architectural Vision
+
+The long-term vision should be:
+
+**PaperOrchestra Local is a local-first, model-independent AI agent orchestration framework that uses configurable prompts, modular agents, interchangeable inference backends, and verifiable execution pipelines to perform specialized writing, reviewing, editing, and research tasks.**
+
+The existing WRITE and REVIEW applications become two predefined implementations of this framework, rather than limitations on what the framework can do.
+
+The existing architecture already provides an important foundation through its replaceable inference interfaces, modular processing stages, reusable LLM calls, caching, monitoring, and validation mechanisms.
+
+The next major development step is to separate agent definitions and prompt configurations from hardcoded orchestration logic.
+
+This would allow users to transform the application into different specialized AI systems simply by configuring agents, prompts, models, and workflows, while developers retain the ability to extend its underlying execution capabilities.
+
+Ultimately, **the application should not dictate what an agent can be; the user should be able to define the agent's purpose, behavior, and workflow within the capabilities and safeguards of the framework.**
+
 ### Ideas for contributors
 
 * Split `run()` into stage functions with a small plugin registry (stages, tools and backends declared in a config file).
