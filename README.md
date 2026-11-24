@@ -678,8 +678,6 @@ The rewrite engine's promise to authors is: **numbers never change, no new citat
 
 # Other applications
 
-# PaperOrchestra Local: Configurable AI Agent Architecture
-
 ## 1. From a Scientific Writing Application to a General-Purpose Agent Framework
 
 One of the most important architectural advantages of **PaperOrchestra Local** is that its behavior can be substantially reconfigured through prompts, agent definitions, and orchestration logic without having to build an entirely new application.
