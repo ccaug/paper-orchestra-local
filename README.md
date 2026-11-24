@@ -1,5 +1,16 @@
 # PaperOrchestra Local
 
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=\textwidth]{https://raw.githubusercontent.com/ccaug/paper-orchestra-local/main/assets/architecture.png}
+    \caption{PaperOrchestra Local architecture and extensibility. The diagram illustrates the WRITE and REVIEW applications, their processing pipelines, shared local inference infrastructure, supporting components, and developer extension points.}
+    \label{fig:paperorchestra-architecture}
+\end{figure*}
+
+PaperOrchestra Local is organized around two independent but complementary applications that share a replaceable local-model inference layer. The WRITE application transforms research materials—including an initial research idea, experimental logs, figures, captions, and a local reference library—into a complete scientific manuscript through four sequential stages: outline generation, offline literature synthesis, section drafting, and LaTeX assembly and compilation. The REVIEW application accepts existing manuscripts in LaTeX, folder, Overleaf ZIP, or PDF formats and processes them through a ten-stage review pipeline: parsing, structural mapping, initial scanning, adjudication, adversarial analysis, harmonization, cross-section verification, global assessment, patch generation, and final verification. Its interactive GUI provides live monitoring, evidence visualization, document comparison, and author-controlled suggestions.
+
+Both applications communicate with their respective LLM integration points, allowing developers to replace models and inference infrastructure without redesigning the application workflows. The default integration supports OpenAI-compatible inference servers, including Ollama, LM Studio, llama.cpp, vLLM, and Colibri. Custom backends can also be implemented through the writing application's `local_chat` interface or the review engine's `LLM._gen()` method. Supporting infrastructure provides prompt and stage management, disk caching, JSON parsing, retry handling, monitoring, event logging, execution-time estimation, and PDF compilation utilities. The architecture also exposes modular extension points for introducing new agents, deterministic verification tools, review stages, prompts, model configurations, input formats, graphical components, and publication templates. Importantly, the review pipeline enforces scientific-safety constraints: automatically accepted revisions must preserve numerical results, avoid introducing references, maintain valid LaTeX, protect tables and mathematical environments, and outperform the original text in a position-swapped comparison. Consequently, developers can independently modify the writing workflow, review methodology, graphical interface, and inference backend while retaining the existing integration contracts and verification mechanisms.
+
 **Write and review scientific papers with local LLMs: no API keys, no cloud.**
 
 > Unofficial add-on built on [google-research/paper-orchestra](https://github.com/google-research/paper-orchestra) (Apache-2.0).
